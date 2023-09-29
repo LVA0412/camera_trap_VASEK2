@@ -1,5 +1,3 @@
-# ВНИМАНИЕ:   не предусмотрел выход из проги!  Нажать Ctrl+C  или завершить процесс
-
 # Pillow-SIMD намного быстрее чем Pillow.
 # Для ускорения работы можно удалить Pillow и установить Pillow-SIMD
 # при этом изменять в коде ничего не надо!
@@ -22,8 +20,8 @@ def arg_parser():
                         help='Путь к папке - источнику изображений')
     parser.add_argument('targetpath', metavar='TARGET_PATH', type=str,
                         help='Путь к целевой папке найденных (дефектных) изображений')
-    parser.add_argument("-tb", "--threshold_blur", type=float, default=200.0,
-                        help="Порог 'размытости' изображений (по умолчанию = 200.0)")
+    parser.add_argument("-tb", "--threshold_blur", type=float, default=250.0,
+                        help="Порог 'размытости' изображений (по умолчанию = 250.0)")
  
     return parser.parse_args()
 
@@ -52,10 +50,13 @@ def main():
             text = "Not Blurry"
             if fm < ARG.threshold_blur:
                 text = "Blurry"
-            cv2.putText(image, "{}: {:.2f}".format(text, fm), (30, 30),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 1)
-            cv2.imshow("Image", image)
-            key = cv2.waitKey(0)
+            cv2.putText(image, "{}: {:.2f}".format(text, fm), (50, 50),
+            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
+            #cv2.imshow("Image", image) # показать на экране
+            cv2.imwrite(os.path.join(ARG.targetpath, file), image)
+        
+    print("Press any key to continue")
+    key = cv2.waitKey(0)
 
     # TODO отделить только картинки, т.к. могут быть другие файлы
     # TODO определить кол-во картинок
