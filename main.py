@@ -6,16 +6,15 @@ from PIL import Image, ImageTk
 import time
 import subprocess
 import os
-import json_to_csv
-import find_def
+from find_defect_json2csv import processing_dataset
+
 # Директории
 DIR_CURRENT=current_directory = os.getcwd()
-DIR_IMAGE = DIR_CURRENT+'\_IMAGE'
-DIR_TO_BROKEN = DIR_CURRENT+'\_BROKEN'
-DIR_TO_EMPTY = DIR_CURRENT+'\_EMPTY'
-DIR_TO_ANIMAL = DIR_CURRENT+'\_ANIMAL'
-
-
+DIR_IMAGE = DIR_CURRENT
+DIR_TO_RESULT = DIR_CURRENT
+DIR_TO_BROKEN = 'D:\\Camera_trap\\megadetector\\result\\broken'
+DIR_TO_EMPTY = 'D:\\Camera_trap\\megadetector\\result\\empty'
+DIR_TO_ANIMAL = "D:\\Camera_trap\\megadetector\\result\\animal"
 
 
 # вызов кнопок
@@ -28,65 +27,75 @@ def button1():
 
 
 def button2():
+    global DIR_TO_RESULT
     global DIR_TO_BROKEN
-    d = filedialog.askdirectory()
-    if d:  # если выбрали дирректорию, то поменяем переменную
-        DIR_TO_GOOD = d
-        dir2.config(text=f'Хорошие фото: {DIR_TO_BROKEN}')
-
-
-def button3():
     global DIR_TO_EMPTY
-    d = filedialog.askdirectory()
-    if d:  # если выбрали дирректорию, то поменяем переменную
-        DIR_TO_BAD = d
-        dir3.config(text=f'Плохие фото: {DIR_TO_EMPTY}')
-
-
-def button3_1():
     global DIR_TO_ANIMAL
     d = filedialog.askdirectory()
     if d:  # если выбрали дирректорию, то поменяем переменную
-        DIR_TO_BAD = d
-        dir3.config(text=f'Плохие фото: {DIR_TO_ANIMAL}')
-
+        DIR_TO_RESULT = d
+        dir2.config(text=f'Результат: {DIR_TO_RESULT}')
+        #DIR_TO_BROKEN = DIR_TO_RESULT+'/broken'
+        #DIR_TO_EMPTY = DIR_TO_RESULT+'/empty'
+        #DIR_TO_ANIMAL = DIR_TO_RESULT+'/animal'
 #***********************************************************
 # процесс запускаем анализа файлов
 def button4():
     global DIR_IMAGE
-    run1.config(text='Процесс запущен... формируем датасет', state='disabled')
+    run1.config(text='Процесс запущен. Ожидайте...', state='disabled')
     win1.update()
+    """
+    def toggle_label():
+        if label.cget("text") == "":
+            label.config(text="Ждите, идет обработка")
+        else:
+            label.config(text="Идет процесс обработки...")
+        label.after(500, toggle_label)  # Меняем текст каждые 500 миллисекунд (0.5 секунды)
+
+    root = tk.Tk()
+    root.title("Не прерывайте обработку!")
+    root.geometry("700x100")
+
+    label = tk.Label(root, font=("Arial", 16))
+    label.pack(pady=20)
+
+    toggle_label()  # Запускаем функцию для мигания надпис
+    """
     # Задайте путь к вашему второму приложению (second.py)
-    second_app_path = 'C:\\MegaDetector\\detection\\run_detector_batch.py'
+    second_app_path = 'detection/run_detector_batch.py'
 
     # Параметры, которые вы хотите передать во второе приложение
-    param1 = r'C:\\MegaDetector\\md_v5a.0.0.pt'
-    param2 = r'C:\\_IMAGE'
-    param3 = r'C:\\_IMAGE\\test_output.json'
-    param4 = r'--output_relative_filenames --recursive --checkpoint_frequency 10000 --quiet'
+    model_params = r'./detection/md_v5b.0.0.pt'
+    temp_output = os.path.join(DIR_TO_RESULT, 'temp_output.json')
+    optional_params = r'--output_relative_filenames --recursive --checkpoint_frequency 10000 --quiet'
+
     # Вызовите second.py с параметрами с помощью subprocess
-    result = subprocess.run(['C:\\Хахатон\\venv\\Scripts\\python', second_app_path, param1, param2, param3,param4], capture_output=True, text=True)
-    f_jsn="имя_файла.json"
-    file_path_1 = os.path.join(directory, f_jsn)
-    file_path_2=os.path.join(directory, 'resalting.csv')
-    filtration(f_jsn,DIR_IMAGE,DIR_TO_ANIMAL,DIR_TO_EMPTY, DIR_TO_BROKEN)
+    cd_command = '(cd ../MegaDetector)'
+    activate_mamba = '(mamba activate cameratraps-detector)'
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    set_params = 'set PYTHONPATH=%PYTHONPATH%;D:\Camera_trap\megadetector\MegaDetector;D:\Camera_trap\megadetector\yolov5'
+    run_detector = f'python {second_app_path} {model_params} {DIR_IMAGE} {temp_output} {optional_params}'
+    commands = [cd_command, activate_mamba, set_params, run_detector]
+    p = subprocess.Popen('cmd.exe', stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    for cmd in commands:
+        p.stdin.write((cmd + "\n").encode())
+    p.stdin.close()
+    p.stdout.read()
     # Вывести результат выполнения, если это необходимо
-
-    if result.returncode == 0:
-        print("Второе приложение успешно выполнено.")
-    else:
-        print("Произошла ошибка при выполнении второго приложения.")
-        print("Код ошибки:", result.returncode)
-        print("Сообщение об ошибке:", result.stderr)
-
 
     run1.config(text='Процесс запущен... сохраняем датасет', state='disabled')
     win1.update()
+
+    processing_dataset(DIR_IMAGE, DIR_TO_RESULT, temp_output)
 
     run1.config(text='Процесс закончен', state='disabled')
     win1.update()
     time.sleep(2)
     run1.config(text='Запустить процесс', state='normal')
+
+#    root.after(0, root.destroy)  # закрываем окно
+#    root.mainloop()
 
 
 def button5():
@@ -100,6 +109,7 @@ def button5():
 def button6():
     global DIR_TO_EMPTY
     try:
+        print(DIR_TO_EMPTY)
         subprocess.Popen(['explorer', DIR_TO_EMPTY])  # Открывает папку в проводнике Windows
     except Exception as e:
         print(f"Ошибка при открытии папки: {e}")
@@ -140,7 +150,7 @@ def button_about(x, y):
 #
 
 # фон
-image_win = Image.open("belka4.png")
+image_win = Image.open("belka.png")
 
 width, height = image_win.size
 
@@ -151,6 +161,7 @@ win1.tk.call('wm', 'iconphoto', win1._w, icon)
 win1.title("Классификация снимков с фотоловушек (Хакатон 2023 команда VASEK2)")
 win1.geometry(f'{width}x{height}')
 win1.resizable(False, False)
+
 
 # Создаем фон на приложении
 tk_image = ImageTk.PhotoImage(image_win)
@@ -175,9 +186,9 @@ dir1.config(fg="black")
 dir1.config(bg="lightblue")
 dir1.config(bd=2, relief="groove")
 
-# 2. Кнопка для выбора директории поломаных фото
-ttk.Button(win1, text="Выбор папки для поломанных фото", command=button2).place(x=10, y=70)
-dir2 = tk.Label(win1, text=f'Поломанные фото: {DIR_TO_BROKEN}', width=39, anchor='w')
+# 2. Кнопка для выбора директории результата
+ttk.Button(win1, text="Выбор папки для результата", command=button2).place(x=10, y=70)
+dir2 = tk.Label(win1, text=f'Результат: {DIR_TO_RESULT}', width=39, anchor='w')
 dir2.place(x=10, y=100)
 # Добавление тени к тексту
 dir2.config(font=("Helvetica", 8))
@@ -185,29 +196,10 @@ dir2.config(fg="black")
 dir2.config(bg="lightblue")
 dir2.config(bd=2, relief="groove")
 
-# 3. Кнопка для выбора директории фото без животных
-ttk.Button(win1, text="Выбор папки для фото без животных", command=button3).place(x=10, y=130)
-dir3 = tk.Label(win1, text=f'Фото без животных: {DIR_TO_EMPTY}', width=39, anchor='w')
-dir3.place(x=10, y=160)
-dir3.config(font=("Helvetica", 8))
-dir3.config(fg="black")
-dir3.config(bg="lightblue")
-dir3.config(bd=2, relief="groove")
-
-# 3_3. Кнопка для выбора директории фото с животными
-ttk.Button(win1, text="Выбор папки для фото с животными", command=button3_1).place(x=10, y=190)
-dir3_1 = tk.Label(win1, text=f'Хорошие фото: {DIR_TO_ANIMAL}', width=39, anchor='w')
-dir3_1.place(x=10, y=220)
-dir3_1.config(font=("Helvetica", 8))
-dir3_1.config(fg="black")
-dir3_1.config(bg="lightblue")
-dir3_1.config(bd=2, relief="groove")
-
 t=250
 # 4. Кнопка для запуска процесса
 run1 = ttk.Button(win1, text="Запустить процесс", command=button4)
 run1.place(x=70, y=t+20)
-
 
 # 5. Кнопка для просмотра хороших фото
 ttk.Button(win1, text="Посмотреть фото с животными", command=button5).place(x=10, y=t+60)
