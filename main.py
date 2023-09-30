@@ -6,7 +6,8 @@ from PIL import Image, ImageTk
 import time
 import subprocess
 import os
-
+import json_to_csv
+import find_def
 # Директории
 DIR_CURRENT=current_directory = os.getcwd()
 DIR_IMAGE = DIR_CURRENT+'\_IMAGE'
@@ -55,9 +56,6 @@ def button4():
     global DIR_IMAGE
     run1.config(text='Процесс запущен... формируем датасет', state='disabled')
     win1.update()
-
-
-
     # Задайте путь к вашему второму приложению (second.py)
     second_app_path = 'C:\\MegaDetector\\detection\\run_detector_batch.py'
 
@@ -66,10 +64,12 @@ def button4():
     param2 = r'C:\\_IMAGE'
     param3 = r'C:\\_IMAGE\\test_output.json'
     param4 = r'--output_relative_filenames --recursive --checkpoint_frequency 10000 --quiet'
-
     # Вызовите second.py с параметрами с помощью subprocess
     result = subprocess.run(['C:\\Хахатон\\venv\\Scripts\\python', second_app_path, param1, param2, param3,param4], capture_output=True, text=True)
-
+    f_jsn="имя_файла.json"
+    file_path_1 = os.path.join(directory, f_jsn)
+    file_path_2=os.path.join(directory, 'resalting.csv')
+    filtration((f_jsn,DIR_TO_ANIMAL,DIR_TO_EMPTY, DIR_TO_BROKEN))
     # Вывести результат выполнения, если это необходимо
 
     if result.returncode == 0:
@@ -140,7 +140,7 @@ def button_about(x, y):
 #
 
 # фон
-image_win = Image.open("belka.png")
+image_win = Image.open("belka4.png")
 
 width, height = image_win.size
 
@@ -207,6 +207,7 @@ t=250
 # 4. Кнопка для запуска процесса
 run1 = ttk.Button(win1, text="Запустить процесс", command=button4)
 run1.place(x=70, y=t+20)
+#здесь должен быть мега детектор???
 
 # 5. Кнопка для просмотра хороших фото
 ttk.Button(win1, text="Посмотреть фото с животными", command=button5).place(x=10, y=t+60)
