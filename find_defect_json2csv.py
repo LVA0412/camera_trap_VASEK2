@@ -208,7 +208,7 @@ def main():
         except:
             print("test_PIL: обнаружена ошибка в файле!")
             copy_file(full_filename, full_broken_dir, path) # копируем файл в директорию сломанных
-            csv_data.append([img_filename_json],1,0,0)
+            csv_data.append([img_filename_json,1,0,0])
         else: # если файл нормально считывается
             
             image = cv2.imdecode(np.fromfile(full_filename, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
