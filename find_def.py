@@ -17,6 +17,8 @@ import numpy as np
 import json
 import csv
 
+THRESHOLD_BLUR = 280
+THRESHOLD_IDENTICAL_BYTES = 65000
 BROKEN_DIR = "broken"
 EMPTY_DIR = "empty"
 ANIMAL_DIR = "animal"
@@ -145,18 +147,19 @@ def copy_file(full_filename, target_dir, sub_dir):
     os.makedirs(full_dir, exist_ok=True)
     shutil.copy2(full_filename, full_dir)
     
-def filtration(file_json,DIR_TO_ANIMAL,DIR_TO_EMPTY, DIR_TO_BROKEN):
+def filtration(f_jsn,DIR_IMAGE,DIR_TO_ANIMAL,DIR_TO_EMPTY, DIR_TO_BROKEN):
     global ARG
 
     ARG = arg_parser()
-    
+
+
     # TODO добавить проверку на версию Pillow
     print("Recommended installing Pillow-SIMD to speed up")
 
     # TODO добавить проверку на существование уже таких целевых папок
-    full_broken_dir = os.path.join(ARG.targetpath,DIR_TO_BROKEN )
-    full_empty_dir = os.path.join(ARG.targetpath, DIR_TO_EMPTY)
-    full_animal_dir = os.path.join(ARG.targetpath, DIR_TO_ANIMAL)
+    full_broken_dir = os.path.join(ARG.DIR_TO_BROKEN,BROKEN_DIR  )
+    full_empty_dir = os.path.join(ARG.DIR_TO_EMPTY, EMPTY_DIR)
+    full_animal_dir = os.path.join(ARG.DIR_TO_ANIMAL, ANIMAL_DIR)
     
     # Создаем директории для каждого класса
     os.makedirs(full_broken_dir, exist_ok=True)
@@ -181,7 +184,7 @@ def filtration(file_json,DIR_TO_ANIMAL,DIR_TO_EMPTY, DIR_TO_BROKEN):
         # отделяем относительный путь от имени файла изображения
         path, file = os.path.split(img_filename_json)
         
-        full_filename = os.path.join(ARG.srcpath, img_filename_json)
+        full_filename = os.path.join(ARG.DIR_IMAGE, img_filename_json)
 
         print(full_filename)
         

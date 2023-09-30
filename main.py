@@ -69,7 +69,7 @@ def button4():
     f_jsn="имя_файла.json"
     file_path_1 = os.path.join(directory, f_jsn)
     file_path_2=os.path.join(directory, 'resalting.csv')
-    filtration((f_jsn,DIR_TO_ANIMAL,DIR_TO_EMPTY, DIR_TO_BROKEN))
+    filtration(f_jsn,DIR_IMAGE,DIR_TO_ANIMAL,DIR_TO_EMPTY, DIR_TO_BROKEN)
     # Вывести результат выполнения, если это необходимо
 
     if result.returncode == 0:
@@ -207,7 +207,7 @@ t=250
 # 4. Кнопка для запуска процесса
 run1 = ttk.Button(win1, text="Запустить процесс", command=button4)
 run1.place(x=70, y=t+20)
-#здесь должен быть мега детектор???
+
 
 # 5. Кнопка для просмотра хороших фото
 ttk.Button(win1, text="Посмотреть фото с животными", command=button5).place(x=10, y=t+60)
