@@ -13,7 +13,7 @@ import numpy as np
 import json
 import csv
 
-THRESHOLD_BLUR = 280
+THRESHOLD_BLUR = 200
 THRESHOLD_IDENTICAL_BYTES = 65000
 
 BROKEN_DIR = "broken"
@@ -289,8 +289,8 @@ def arg_parser():
                         help='Путь к целевой папке найденных (дефектных) изображений')
     parser.add_argument('json', metavar='JSON_PATH', type=str,
                         help='Путь к json файлу с результатами распознавания животных')                        
-    parser.add_argument("-tb", "--threshold_blur", type=int, default=280,
-                        help="Порог 'размытости' изображений (по умолчанию = 280)")
+    parser.add_argument("-tb", "--threshold_blur", type=int, default=200,
+                        help="Порог 'размытости' изображений (по умолчанию = 200)")
     parser.add_argument("-ni", "--threshold_identical_bytes", type=int, default=65000,
                         help="Порог 'размытости' изображений (по умолчанию = 65000)")                       
  
