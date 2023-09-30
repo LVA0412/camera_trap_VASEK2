@@ -15,6 +15,7 @@ import csv
 
 THRESHOLD_BLUR = 200
 THRESHOLD_IDENTICAL_BYTES = 65000
+RESIZE_SCALE_FACTOR = 0.1
 
 BROKEN_DIR = "broken"
 EMPTY_DIR = "empty"
@@ -145,12 +146,15 @@ def processing_dataset(srcpath, targetpath, jsonpath):
      
 
     csv_data = []
-    break_count = 10 # для отладки установить сколько строк обработать в json файле или -1 для всех
+    num_file = len(jsondata['images'])
+    current_count = 0
+    break_count = -1 # для отладки установить сколько строк обработать в json файле или -1 для всех
 
     for json_image in jsondata['images'] :
         if not break_count:
             break
-        break_count -= 1   
+        break_count -= 1 
+        current_count += 1       
         #path = root.split(os.sep)
         img_filename_json = json_image['file']
         # отделяем относительный путь от имени файла изображения
@@ -158,7 +162,7 @@ def processing_dataset(srcpath, targetpath, jsonpath):
         
         full_filename = os.path.join(srcpath, img_filename_json)
 
-        print(full_filename)
+        print(str(current_count)+"/"+str(num_file)+"  "+full_filename)
         
         num_animals=0
         detections = json_image['detections']
@@ -196,11 +200,15 @@ def processing_dataset(srcpath, targetpath, jsonpath):
             # Наиболее частая проблема в датасете - это размытые и засвеченные кадры
             # Проанализируем размытость изображения, для этого сперва преобразуем изображение в градации серого
             
+            
             if len(image.shape) == 2: # проверка если изображение с одним каналом
                 gray_image = image
             else: # если не делать проверку, то ч/б изображения вызывают ошибку здесь
                 gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)    
-                
+            
+            # уменьшаем размер
+            image = cv2.resize(image,(0, 0), fx=RESIZE_SCALE_FACTOR, fy=RESIZE_SCALE_FACTOR)
+            
             # сворачиваем изображение с помощью следующего ядра, размерностью 3х3
             # 0  1  0
             # 1 -4  1
@@ -219,6 +227,7 @@ def processing_dataset(srcpath, targetpath, jsonpath):
                 continue
             else:
                 text = "Not Blurry"
+                print("{}: {:.2f}".format("Считаем четким, variance_of_laplacian", fm))
 
             # Проверим, файл на бинарном уровне на наличие длинных повторяющихся последовательностей (битый канал или однородный цвет) 
             
@@ -237,15 +246,19 @@ def processing_dataset(srcpath, targetpath, jsonpath):
             av, koef_bl, koef_wt, koef_av = koeff(gray_image)
             if av <=10 or av>=240:
                 br=1
+                print("Broken: av <=10 or av>=240")
             elif koef_bl>0.8 or koef_av>0.8 or koef_wt>0.8:
                 br=1
+                print("Broken: koef_bl>0.8 or koef_av>0.8 or koef_wt>0.8")
             else :
                 br = bad_color_areas(gray_image)
-
-            if br == 0:
-                br = color_channel_bad(image)
+                print("bad_color_areas = "+str(br))
+                if br == 0: # след проверка
+                    br = color_channel_bad(image)
+                    print("color_channel_bad = "+str(br))
                 
             if br:
+                print("Помещаем в класс Broken.")
                 copy_file(full_filename, full_broken_dir, path) # копируем файл в директорию сломанных
                 csv_data.append([img_filename_json,1,0,0])
                 continue
@@ -260,7 +273,7 @@ def processing_dataset(srcpath, targetpath, jsonpath):
             
             # cv2.putText(image, "{}: {:.2f}".format("number_identical_bytes", number_identical_bytes), (30, 60),
             # cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
-            # #cv2.imshow("Image", image) # показать на экране
+            ##cv2.imshow("Image", image) # показать на экране
             # cv2.imwrite(os.path.join(targetpath, file), image)
             
     
