@@ -13,6 +13,7 @@ from PIL import Image as ImagePIL
 import os
 import cv2
 import shutil
+import numpy as np
 
 BROKEN_DIR = "broken"
 EMPTY_DIR = "empty"
@@ -55,7 +56,64 @@ def calc_number_identical_bytes(filename):
 
     return maxnum
 
-  
+def bad_color_areas(gray_image): #функция искать одноцветные области брака
+    b=0
+    n=np.array(gray_image)
+    unique, counts = np.unique(np.ravel(gray_image), return_counts=True)
+
+    for i in range(len(n[:,0])):
+        if len(np.unique(np.array(n[i,:])))==1 :
+            uno=np.unique(np.array(n[i,:]), return_counts=False)
+            if uno!=0:
+                if uno!=255:
+                    b+=1
+
+    #print(b)
+    br=0
+    if b>25:
+        br=1
+
+    elif len(np.array(unique))<7:
+        br=1
+    elif (max(np.array(counts))/len(np.ravel(gray_image)))>0.25:
+
+        if np.mean(n)<240:
+            br=0
+            if np.mean(n)<70:
+                br=0
+            else: br=1
+
+        else: br=1
+        # print(max(np.array(counts))/len(n))
+        #  br=1
+
+    return br  
+
+def koeff(gray_image):#соотношения белого, черного, серединки
+    n=np.ravel(gray_image)
+    av=np.mean(n)
+    koef_bl=sum(n>240)/len(n)
+    koef_wt=sum(n<10)/len(n)
+    koef_av=(sum(n<(av+10))-sum(n<(av-10)))/len(n)
+    return (av,koef_bl,koef_wt,koef_av)
+
+def color_channel_bad(img): #ошибки в цветовых каналах
+    r = img[:,:,0]
+    g= img[:,:,1]
+    b= img[:,:,2]
+    rr=np.ravel(r)
+    gr=np.ravel(g)
+    br=np.ravel(b)
+    #print(np.mean(rr),np.mean(br),np.mean(gr))
+    if np.mean(rr)>2*np.mean(gr) or np.mean(rr)>2*sum(br):
+        br=1
+    elif np.mean(gr)>2*np.mean(rr) or np.mean(gr)>2*np.mean(br):
+        br=1
+    elif np.mean(br)>2*np.mean(gr) or np.mean(br)>2*np.mean(rr):
+        br=1
+    else:
+        br=0
+    return br
 
 def arg_parser():
     epilog_text = """
@@ -112,11 +170,45 @@ def main():
             full_filename = os.path.join(root, file)
             print(full_filename)
             try:
+                # Техническая проверка возможности считывания файла и работы с ним библиотекой PIL
                 test_PIL(full_filename)
             except:
                 print("test_PIL: обнаружена ошибка в файле!")
                 shutil.copy(full_filename, os.path.join(full_broken_dir, file)) # копируем файл в директорию сломанных
-            else: # если не было ошибок
+            else: # если файл нормально считывается
+                
+                image = cv2.imread(full_filename)
+                # TODO знась ОЧЕНЬ НУЖНО выловить сообщения об ошибке вида:
+                # Corrupt JPEG data:
+                # .imread() посылает их в поток сообщений, но не вызывает никаких ошибок и исключений!
+                # это решит проблему с частично битыми изображениями, где остальные методы не сработали
+                
+                # Наиболее частая проблема в датасете - это размытые и засвеченные кадры
+                # Проанализируем размытость изображения, для этого сперва преобразуем изображение в градации серого
+                
+                if len(image.shape) == 2: # проверка если изображение с одним каналом
+                    gray_image = image
+                else: # если не делать проверку, то ч/б изображения вызывают ошибку здесь
+                    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)    
+                    
+                # сворачиваем изображение с помощью следующего ядра, размерностью 3х3
+                # 0  1  0
+                # 1 -4  1
+                # 0  1  0
+                # и вычислим дисперсию Лапласа, чем она меньше, тем более размытое изображение 
+                # Оператор Лапласа выделяет области изображения, содержащие быстрые изменения интенсивности
+                
+                fm = variance_of_laplacian(gray_image)
+                
+                if fm < ARG.threshold_blur:
+                    text = "Blurry"
+                    print("{}: {:.2f}".format("Размытое изображение variance_of_laplacian", fm))
+                    shutil.copy(full_filename, os.path.join(full_broken_dir, file)) # копируем файл в директорию сломанных
+                    continue
+                else:
+                    text = "Not Blurry"
+
+                # Проверим, файл на бинарном уровне на наличие длинных повторяющихся последовательностей (битый канал или однородный цвет) 
                 
                 number_identical_bytes = calc_number_identical_bytes(full_filename)
                 if number_identical_bytes > ARG.threshold_identical_bytes: # если количество повторяющихся байт в файле больше заданного порога
@@ -124,27 +216,27 @@ def main():
                     shutil.copy(full_filename, os.path.join(full_broken_dir, file)) # копируем файл в директорию сломанных
                     continue
                     
-                # TODO перенести в отдельную ф-ю
-                image = cv2.imread(full_filename)
-                # TODO знась ОЧЕНЬ НУЖНО выловить сообщения об ошибке вида:
-                # Corrupt JPEG data:
-                # .imread() посылает их в поток сообщений, но не вызывает никаких ошибок и исключений!
-                # это решит проблему с частично битыми изображениями, где остальные методы не сработали
                 
-                if len(image.shape) == 2: # значит изображение черно-белое
-                    gray = image
-                else: # если не делать проверку, то ч/б изображения вызывают ошибку здесь
-                    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+              
+                
+                # здесь идеи Кати
+                br = 0
+                av, koef_bl, koef_wt, koef_av = koeff(gray_image)
+                if av <=10 or av>=240:
+                    br=1
+                elif koef_bl>0.8 or koef_av>0.8 or koef_wt>0.8:
+                    br=1
+                else :
+                    br = bad_color_areas(gray_image)
+
+                if br == 0:
+                    br = color_channel_bad(image)
                     
-                fm = variance_of_laplacian(gray)
-                
-                if fm < ARG.threshold_blur:
-                    text = "Blurry"
+                if br:
                     shutil.copy(full_filename, os.path.join(full_broken_dir, file)) # копируем файл в директорию сломанных
                     continue
-                else:
-                    text = "Not Blurry"
-                    print("Файл прошел проверки без замечаний")
+                
+
                     
                 cv2.putText(image, "{}: {:.2f}".format(text, fm), (30, 30),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
