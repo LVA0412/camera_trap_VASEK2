@@ -55,35 +55,25 @@ def button4():
     global DIR_IMAGE
     run1.config(text='Процесс запущен... формируем датасет', state='disabled')
     win1.update()
-    # Замените пути и параметры на свои значения
-    # Команда, которую вы хотите выполнить
-    command = [
-        'python',  # Имя исполняемого файла Python
-        DIR_CURRENT+r'\MegaDetector\detection\run_detector_batch.py',  # Путь к вашему скрипту run_detector_batch.py
-        DIR_CURRENT+r'\md_v5a.0.0.pt',  # Путь к файлу md_v5a.0.0.pt
-        DIR_IMAGE,  # Путь к папке с изображениями
-        DIR_IMAGE,  # Путь к выходному JSON-файлу
-        '--output_relative_filenames',  # Параметр --output_relative_filenames
-        '--recursive',  # Параметр --recursive
-        '--checkpoint_frequency', '10000',  # Параметр --checkpoint_frequency с указанием значения
-        '--quiet'  # Параметр --quiet
-    ]
 
-    print (command)
 
-    # Выполнение команды
-    result = subprocess.run(command, capture_output=True, text=True, encoding='cp1251')
 
-    # Проверка вывода
-    if result.returncode == 0:
-        print("Команда успешно выполнена:")
-        print(result.stdout)
-    else:
-        print("Произошла ошибка при выполнении команды:")
-        print(result.stderr)
+    # Задайте путь к вашему второму приложению (second.py)
+    second_app_path = 'C:\MegaDetector\detection\run_detector_batch.py'
 
-    # Запустите программу с параметрами
-    subprocess.run(command, capture_output=True, text=True)
+    # Параметры, которые вы хотите передать во второе приложение
+    param1 = r'C:\MegaDetector\md_v5a.0.0.pt'
+    param2 = r'C:\_IMAGE'
+    param3 = r'C:\_IMAGE\test_output.json'
+    param4 = r'--output_relative_filenames --recursive --checkpoint_frequency 10000 --quiet'
+
+    # Вызовите second.py с параметрами с помощью subprocess
+    result = subprocess.run(['python', second_app_path, param1, param2, param3,param4], capture_output=True, text=True)
+
+    # Вывести результат выполнения, если это необходимо
+
+    print(result.stdout)
+
 
     run1.config(text='Процесс запущен... сохраняем датасет', state='disabled')
     win1.update()
