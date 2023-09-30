@@ -59,20 +59,25 @@ def button4():
 
 
     # Задайте путь к вашему второму приложению (second.py)
-    second_app_path = 'C:\MegaDetector\detection\run_detector_batch.py'
+    second_app_path = 'C:\\MegaDetector\\detection\\run_detector_batch.py'
 
     # Параметры, которые вы хотите передать во второе приложение
-    param1 = r'C:\MegaDetector\md_v5a.0.0.pt'
-    param2 = r'C:\_IMAGE'
-    param3 = r'C:\_IMAGE\test_output.json'
+    param1 = r'C:\\MegaDetector\\md_v5a.0.0.pt'
+    param2 = r'C:\\_IMAGE'
+    param3 = r'C:\\_IMAGE\\test_output.json'
     param4 = r'--output_relative_filenames --recursive --checkpoint_frequency 10000 --quiet'
 
     # Вызовите second.py с параметрами с помощью subprocess
-    result = subprocess.run(['python', second_app_path, param1, param2, param3,param4], capture_output=True, text=True)
+    result = subprocess.run(['C:\\Хахатон\\venv\\Scripts\\python', second_app_path, param1, param2, param3,param4], capture_output=True, text=True)
 
     # Вывести результат выполнения, если это необходимо
 
-    print(result.stdout)
+    if result.returncode == 0:
+        print("Второе приложение успешно выполнено.")
+    else:
+        print("Произошла ошибка при выполнении второго приложения.")
+        print("Код ошибки:", result.returncode)
+        print("Сообщение об ошибке:", result.stderr)
 
 
     run1.config(text='Процесс запущен... сохраняем датасет', state='disabled')
@@ -162,23 +167,41 @@ win1.geometry(f'{width}x{height}+{x}+{y}')
 
 # 1. Кнопка для выбора директории исходных фото
 ttk.Button(win1, text="Выбор папки исходных фото", command=button1).place(x=10, y=10)
-dir1 = tk.Label(win1, text=f'Исходные фото: {DIR_IMAGE}')
-dir1.place(x=40, y=40)
+dir1 = tk.Label(win1, text=f'Исходные фото: {DIR_IMAGE}', width=39, anchor='w')
+dir1.place(x=10, y=40)
+# Добавление тени к тексту
+dir1.config(font=("Helvetica", 8))
+dir1.config(fg="black")
+dir1.config(bg="lightblue")
+dir1.config(bd=2, relief="groove")
 
 # 2. Кнопка для выбора директории поломаных фото
 ttk.Button(win1, text="Выбор папки для поломанных фото", command=button2).place(x=10, y=70)
-dir2 = tk.Label(win1, text=f'Поломанные фото: {DIR_TO_BROKEN}')
-dir2.place(x=40, y=100)
+dir2 = tk.Label(win1, text=f'Поломанные фото: {DIR_TO_BROKEN}', width=39, anchor='w')
+dir2.place(x=10, y=100)
+# Добавление тени к тексту
+dir2.config(font=("Helvetica", 8))
+dir2.config(fg="black")
+dir2.config(bg="lightblue")
+dir2.config(bd=2, relief="groove")
 
 # 3. Кнопка для выбора директории фото без животных
 ttk.Button(win1, text="Выбор папки для фото без животных", command=button3).place(x=10, y=130)
-dir3 = tk.Label(win1, text=f'Фото без животных: {DIR_TO_EMPTY}')
-dir3.place(x=40, y=160)
+dir3 = tk.Label(win1, text=f'Фото без животных: {DIR_TO_EMPTY}', width=39, anchor='w')
+dir3.place(x=10, y=160)
+dir3.config(font=("Helvetica", 8))
+dir3.config(fg="black")
+dir3.config(bg="lightblue")
+dir3.config(bd=2, relief="groove")
 
 # 3_3. Кнопка для выбора директории фото с животными
 ttk.Button(win1, text="Выбор папки для фото с животными", command=button3_1).place(x=10, y=190)
-dir3_1 = tk.Label(win1, text=f'Хорошие фото с животными: {DIR_TO_ANIMAL}')
-dir3_1.place(x=40, y=220)
+dir3_1 = tk.Label(win1, text=f'Хорошие фото: {DIR_TO_ANIMAL}', width=39, anchor='w')
+dir3_1.place(x=10, y=220)
+dir3_1.config(font=("Helvetica", 8))
+dir3_1.config(fg="black")
+dir3_1.config(bg="lightblue")
+dir3_1.config(bd=2, relief="groove")
 
 t=250
 # 4. Кнопка для запуска процесса
