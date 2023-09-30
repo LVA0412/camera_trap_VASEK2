@@ -1,7 +1,3 @@
-# TODO отделить только картинки, т.к. могут быть другие файлы
-# TODO разобраться почему не работают пути с пробелами и русскими буквами!
-
-
 
 # Pillow-SIMD намного быстрее чем Pillow.
 # Для ускорения работы можно удалить Pillow и установить Pillow-SIMD
@@ -16,6 +12,9 @@ import shutil
 import numpy as np
 import json
 import csv
+
+THRESHOLD_BLUR = 280
+THRESHOLD_IDENTICAL_BYTES = 65000
 
 BROKEN_DIR = "broken"
 EMPTY_DIR = "empty"
@@ -117,25 +116,6 @@ def color_channel_bad(img): #ошибки в цветовых каналах
         br=0
     return br
 
-def arg_parser():
-    epilog_text = """
-    Детальное описание параметров
-    здесь
-    """
-
-    parser = argparse.ArgumentParser(description='Определение дефектных фото', epilog=epilog_text)
-    parser.add_argument('srcpath', metavar='SOURCE_PATH', type=str,
-                        help='Путь к папке - источнику изображений')
-    parser.add_argument('targetpath', metavar='TARGET_PATH', type=str,
-                        help='Путь к целевой папке найденных (дефектных) изображений')
-    parser.add_argument('json', metavar='JSON_PATH', type=str,
-                        help='Путь к json файлу с результатами распознавания животных')                        
-    parser.add_argument("-tb", "--threshold_blur", type=int, default=280,
-                        help="Порог 'размытости' изображений (по умолчанию = 280)")
-    parser.add_argument("-ni", "--threshold_identical_bytes", type=int, default=65000,
-                        help="Порог 'размытости' изображений (по умолчанию = 65000)")                       
- 
-    return parser.parse_args()
 
 def variance_of_laplacian(image):
     return cv2.Laplacian(image, cv2.CV_64F).var()
@@ -144,19 +124,14 @@ def copy_file(full_filename, target_dir, sub_dir):
     full_dir = os.path.join(target_dir, sub_dir)
     os.makedirs(full_dir, exist_ok=True)
     shutil.copy2(full_filename, full_dir)
-    
-def main():
-    global ARG
 
-    ARG = arg_parser()
     
-    # TODO добавить проверку на версию Pillow
-    print("Recommended installing Pillow-SIMD to speed up")
+def processing_dataset(srcpath, targetpath, jsonpath):
 
     # TODO добавить проверку на существование уже таких целевых папок
-    full_broken_dir = os.path.join(ARG.targetpath, BROKEN_DIR)
-    full_empty_dir = os.path.join(ARG.targetpath, EMPTY_DIR)
-    full_animal_dir = os.path.join(ARG.targetpath, ANIMAL_DIR)
+    full_broken_dir = os.path.join(targetpath, BROKEN_DIR)
+    full_empty_dir = os.path.join(targetpath, EMPTY_DIR)
+    full_animal_dir = os.path.join(targetpath, ANIMAL_DIR)
     
     # Создаем директории для каждого класса
     os.makedirs(full_broken_dir, exist_ok=True)
@@ -164,13 +139,13 @@ def main():
     os.makedirs(full_animal_dir, exist_ok=True)
      
      
-    with open(ARG.json, 'r') as file:
+    with open(jsonpath, 'r') as file:
         # Parse JSON data
         jsondata = json.load(file)     
      
 
     csv_data = []
-    break_count = -1 # для отладки установить сколько строк обработать в json файле или -1 для всех
+    break_count = 10 # для отладки установить сколько строк обработать в json файле или -1 для всех
 
     for json_image in jsondata['images'] :
         if not break_count:
@@ -181,7 +156,7 @@ def main():
         # отделяем относительный путь от имени файла изображения
         path, file = os.path.split(img_filename_json)
         
-        full_filename = os.path.join(ARG.srcpath, img_filename_json)
+        full_filename = os.path.join(srcpath, img_filename_json)
 
         print(full_filename)
         
@@ -235,7 +210,7 @@ def main():
             
             fm = variance_of_laplacian(gray_image)
             
-            if fm < ARG.threshold_blur:
+            if fm < THRESHOLD_BLUR:
                 text = "Blurry"
                 print("{}: {:.2f}".format("Размытое изображение variance_of_laplacian", fm))
                 
@@ -248,7 +223,7 @@ def main():
             # Проверим, файл на бинарном уровне на наличие длинных повторяющихся последовательностей (битый канал или однородный цвет) 
             
             number_identical_bytes = calc_number_identical_bytes(full_filename)
-            if number_identical_bytes > ARG.threshold_identical_bytes: # если количество повторяющихся байт в файле больше заданного порога
+            if number_identical_bytes > THRESHOLD_IDENTICAL_BYTES: # если количество повторяющихся байт в файле больше заданного порога
                 print("{}: {:d}".format("Вероятно поврежденный файл! calc_number_identical_bytes ", number_identical_bytes))
                 copy_file(full_filename, full_broken_dir, path)# копируем файл в директорию сломанных
                 csv_data.append([img_filename_json,1,0,0])
@@ -286,10 +261,10 @@ def main():
             # cv2.putText(image, "{}: {:.2f}".format("number_identical_bytes", number_identical_bytes), (30, 60),
             # cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
             # #cv2.imshow("Image", image) # показать на экране
-            # cv2.imwrite(os.path.join(ARG.targetpath, file), image)
+            # cv2.imwrite(os.path.join(targetpath, file), image)
             
     
-    with open(os.path.join(ARG.targetpath, 'submission.csv'), 'w', encoding='utf-8', newline='') as csvfile:
+    with open(os.path.join(targetpath, 'submission.csv'), 'w', encoding='utf-8', newline='') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',')
         csv_writer.writerow(['filename','broken','empty','animal'])
         for s in csv_data:
@@ -301,6 +276,35 @@ def main():
     print("\nThe End")
     print("Press any key to continue")
     key = cv2.waitKey(0)    
-           
+
+def arg_parser():
+    epilog_text = """
+    Скрипт фильтрации изображений
+    """
+
+    parser = argparse.ArgumentParser(description='Определение дефектных фото', epilog=epilog_text)
+    parser.add_argument('srcpath', metavar='SOURCE_PATH', type=str,
+                        help='Путь к папке - источнику изображений')
+    parser.add_argument('targetpath', metavar='TARGET_PATH', type=str,
+                        help='Путь к целевой папке найденных (дефектных) изображений')
+    parser.add_argument('json', metavar='JSON_PATH', type=str,
+                        help='Путь к json файлу с результатами распознавания животных')                        
+    parser.add_argument("-tb", "--threshold_blur", type=int, default=280,
+                        help="Порог 'размытости' изображений (по умолчанию = 280)")
+    parser.add_argument("-ni", "--threshold_identical_bytes", type=int, default=65000,
+                        help="Порог 'размытости' изображений (по умолчанию = 65000)")                       
+ 
+    return parser.parse_args()
+
+def main():
+    global ARG
+    ARG = arg_parser()
+    
+    # TODO добавить проверку на версию Pillow
+    print("Recommended installing Pillow-SIMD to speed up")
+    
+    processing_dataset(ARG.srcpath, ARG.targetpath, ARG.json)
+
+    
 if __name__ == "__main__":
     main()
