@@ -169,7 +169,7 @@ def processing_dataset(srcpath, targetpath, jsonpath):
         for i in range(len(detections)):
             kategoria=(detections[i]['category'])
             uverennost= (detections[i]['conf'])
-            if int(kategoria) == 1 and float(uverennost)>0.7:
+            if int(kategoria) == 1 and float(uverennost)>=0.9:
                 num_animals += 1
                 print("{}: {:.2f}".format("Обнаружено животное с уверенностью ", uverennost))
             #i+=1
